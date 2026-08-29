@@ -1,0 +1,30 @@
+{
+  "summary": "Frontend-only re-test of the 2 CRITICAL bugs from iteration_1, plus the requested sanity flow. RESULT: both critical bugs are FIXED. (1) Cart persistence: added Chicken Biryani (Full) at Royal Biryani House -> floating cart '1 Item · Rs249' -> full page.reload() -> localStorage fudora_cart_v1 still holds restaurant + items array and floating cart still shows '1 Item · Rs249 from Royal Biryani House' (identical to pre-reload). StrictMode no longer wipes the cart. (2) Cross-restaurant replace dialog now fires even after a fresh full page load (navigated by URL to Sasaram Spice Villa, clicked ADD) -> 'Replace items in cart?' dialog shown with both 'Clear & Add' and 'Cancel'; Cancel preserved the original Royal Biryani cart in localStorage. (3) Full checkout: fresh signup qa1787553739@qamail.com -> Royal Biryani House -> ADD Chicken Biryani (Full) -> floating cart -> proceed-to-checkout -> FUDORA50 applied (Rs100 off, total Rs181 = 249-100+25 delivery+~7 tax) -> Place Order -> landed on /orders/FUD260824EEF71?new=1 with order-tracking-timeline visible, order-status-badge=PENDING, 'Order placed!' banner and FUD id shown. No redirect to '/'. (4) Polling/admin sanity: restaurant admin royal@fudora.demo logged in -> /admin dashboard loaded -> /admin/orders listed FUD260824EEF71 -> clicked Accept -> customer tracking page (no reload) auto-updated to ACCEPTED and 'Restaurant Accepted' stage lit within ~9s poll window. Backend tests skipped per request.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Order tracking (?new=1)", "issues": ["'Order placed!' celebration banner text renders very low-contrast (light text over a pale cream gradient) during/after its fade animation - the headline is barely readable in the screenshot"]},
+      {"screen": "Replace-items dialog", "issues": ["Radix a11y console warning: 'Missing Description or aria-describedby for DialogContent' - add DialogDescription to the ProductCard replace dialog"]},
+      {"screen": "Any page while logged out", "issues": ["Two 401 console errors on every load (auth/me probe with no session). Harmless but noisy; suppress when no token is present"]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "None blocking. Optional polish: fix 'Order placed!' banner contrast, add DialogDescription to the replace-cart dialog, and skip the /auth/me call when no token exists to avoid 401 console noise.",
+    "Iteration_1 backend items still open (not re-tested this round): commission_pct persisted only in a module global, no brute-force lockout, CORS '*' with allow_credentials, no order status state machine, PATCH product overwrites fields."
+  ],
+  "critical_code_review_comments": [
+    "CartContext.jsx: lazy useState(loadCart) + hydrated useRef guard is the correct StrictMode-safe pattern - verified working.",
+    "Checkout.jsx: placedRef guard on the count===0 redirect plus nav(..., {replace:true}) before clear() correctly wins over the empty-cart redirect - verified working."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (skipped per request)", "frontend": "100% (4/4 requested flows passed)"},
+  "seed_data_creation": "Created customer qa1787553739@qamail.com / Qa@123456 and order FUD260824EEF71 (Royal Biryani House, Rs181, now status ACCEPTED). Harmless demo data.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "Super admin fudoraofficial05@gmail.com / Fudora@2026; restaurant admin royal@fudora.demo / Restaurant@2026 (verified this round); new QA customer qa1787553739@qamail.com / Qa@123456",
+  "context_for_next_testing_agent": "Both iteration_1 CRITICAL frontend bugs are fixed and re-verified. page.reload() between cart-add and checkout is now SAFE (cart persists), so Playwright flows may use goto/reload freely. Royal Biryani House id = 614d274f-98da-47c6-aa11-5d87bab35a06, Sasaram Spice Villa = 42bfc76f-ac36-4c2f-a45d-fa31da36d4ea. Useful testids: restaurant-card-item, product-card, food-item-add-button, food-item-quantity-increment/decrement, floating-cart, proceed-to-checkout, checkout-place-order-button, order-tracking-timeline, order-status-badge, restaurant-admin-order-accept-btn, admin-email/admin-password/admin-login-submit, signup-name/auth-email/auth-password/auth-submit. Backend pytest suite in /app/backend/tests was not re-run this round; only known failure previously was test_brute_force_lockout_after_5_fails.",
+  "rca_of_the_issue": "Fix confirmed. Cart loss was caused by the load/persist double-effect flushing the initial empty state under StrictMode; now cart state is initialised lazily from localStorage and the first persist write is skipped via a hydrated ref. Post-order redirect to '/' was caused by the count===0 effect firing after clear(); now placedRef short-circuits it and navigation happens before clear() with replace:true."
+}

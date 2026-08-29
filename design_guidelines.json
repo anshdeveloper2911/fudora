@@ -1,0 +1,162 @@
+{
+  "project_identity": {
+    "app_name": "Fudora",
+    "tagline": "Your Food. Your Way.",
+    "market_focus": "Sasaram, Bihar, India",
+    "brand_archetype": "The Gourmet Fusion & Kinetic Freshness",
+    "theme_mode": "Light theme primary (clean crisp white & warm alabaster base) with high-contrast Deep Mulberry & Saffron Gold accents"
+  },
+  "typography": {
+    "font_family_primary": "Plus Jakarta Sans, system-ui, sans-serif",
+    "font_family_heading": "Plus Jakarta Sans, sans-serif",
+    "font_family_mono": "JetBrains Mono, monospace",
+    "google_fonts_url": "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap",
+    "scale": {
+      "h1_hero": "text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight leading-tight",
+      "h2_section": "text-2xl sm:text-3xl font-bold tracking-tight",
+      "h3_card": "text-lg sm:text-xl font-semibold tracking-tight",
+      "h4_title": "text-base sm:text-lg font-semibold",
+      "body_main": "text-sm sm:text-base font-normal leading-relaxed text-slate-700",
+      "body_small": "text-xs sm:text-sm font-medium text-slate-500",
+      "badge_label": "text-[11px] font-bold tracking-wider uppercase"
+    }
+  },
+  "colors": {
+    "brand_primary": {
+      "hex": "#4A0E2E",
+      "name": "Deep Royal Mulberry",
+      "usage": "Brand logo, structural headers, high-importance accents, dark buttons, active badges"
+    },
+    "brand_secondary": {
+      "hex": "#F59E0B",
+      "name": "Saffron Gold",
+      "usage": "Primary action CTA buttons, star ratings, promo banners, highlights, active toggles"
+    },
+    "brand_accent_green": {
+      "hex": "#10B981",
+      "name": "Basil Mint",
+      "usage": "Pure Veg badges, order status 'Delivered/Preparing', discount tag background, free delivery indicators"
+    },
+    "brand_accent_red": {
+      "hex": "#EF4444",
+      "name": "Crimson Chili",
+      "usage": "Non-Veg badge dot, destructive actions, offer expiry alert"
+    },
+    "surfaces": {
+      "page_background": "#FAF8F5",
+      "card_background": "#FFFFFF",
+      "sidebar_admin": "#1E0A17",
+      "muted_surface": "#F4EFEA",
+      "border_subtle": "#E5DEC9",
+      "hover_overlay": "rgba(74, 14, 46, 0.04)"
+    },
+    "text": {
+      "primary": "#1E1810",
+      "secondary": "#5C5449",
+      "muted": "#8C8275",
+      "inverted": "#FFFFFF",
+      "accent": "#F59E0B"
+    }
+  },
+  "layout_and_spacing": {
+    "mobile_first": true,
+    "breakpoints": {
+      "xs": "320px",
+      "sm": "640px",
+      "md": "768px",
+      "lg": "1024px",
+      "xl": "1280px"
+    },
+    "container_padding": "px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto",
+    "bento_grid_marketing": {
+      "gap": "gap-4 sm:gap-6",
+      "cols_hero": "grid grid-cols-1 md:grid-cols-12 gap-6"
+    },
+    "dashboard_grid": {
+      "gap": "gap-4 md:gap-6",
+      "cols_stats": "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+    },
+    "mobile_bottom_nav": {
+      "height": "h-16",
+      "background": "bg-white/95 backdrop-blur-md border-t border-amber-900/10 z-50 fixed bottom-0 left-0 right-0",
+      "tabs": [
+        {"id": "home", "label": "Home", "icon": "Home"},
+        {"id": "search", "label": "Search", "icon": "Search"},
+        {"id": "orders", "label": "Orders", "icon": "ShoppingBag"},
+        {"id": "favourites", "label": "Saved", "icon": "Heart"},
+        {"id": "cart", "label": "Cart", "icon": "ShoppingCart", "has_badge": true}
+      ]
+    }
+  },
+  "component_strategies": {
+    "header_nav": {
+      "customer": "Sticky header with location pill ('Sasaram, GT Road ▼'), Search bar shortcut, Offers coupon chip, Cart button with dynamic item badge.",
+      "restaurant_admin": "Top bar with restaurant live toggle switch ('Receiving Orders: ON/OFF'), alert notifications, quick menu toggle.",
+      "super_admin": "Global platform health badge ('Sasaram Hub: Active'), 10% commission revenue counter, quick action buttons."
+    },
+    "restaurant_cards": {
+      "style": "Clean white card with subtle 1px border (#E5DEC9), rounded-2xl, soft hover shadow, high impact hero image with offer badge overlay ('50% OFF up to ₹100')",
+      "details": "Restaurant name, ratings badge (e.g., 4.5 ★ in Saffron Gold), delivery time (e.g., 25-35 mins), distance in Sasaram (e.g., 1.8 km), cuisines tags (Biryani, North Indian)."
+    },
+    "food_item_cards": {
+      "style": "Horizontal layout on mobile/desktop. Left text column: Veg/Non-Veg indicator icon, Dish Name, Price (₹), Rating/Votes, Description. Right column: Square rounded food photo with floating shadow, overlay '+ ADD' pill button with quantity step controls (- 1 +)."
+    },
+    "live_order_timeline": {
+      "steps": ["Placed", "Accepted", "Preparing", "Out for Delivery", "Delivered"],
+      "animated": true,
+      "features": "Real-time step highlighting with Basil Mint glow, estimated timer countdown (e.g., 22 mins remaining), delivery driver details (Name, Bike No, Call CTA), live mock route map."
+    },
+    "admin_dashboard": {
+      "cards": "Cardless or soft-bordered dense cards. Key metric widgets: Today's Orders, Total Revenue, Platform Commission (10%), Active Riders.",
+      "charts": "Recharts / Shadcn charts with custom color tokens (#4A0E2E for primary area chart, #F59E0B for secondary line chart)."
+    }
+  },
+  "image_urls": {
+    "hero_food_banner": "https://images.pexels.com/photos/35123985/pexels-photo-35123985.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+    "categories": {
+      "biryani": "https://images.pexels.com/photos/35287418/pexels-photo-35287418.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "pizza": "https://images.unsplash.com/photo-1662186342592-5b1236e95a4e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDN8MHwxfHNlYXJjaHwxfHxkZWxpY2lvdXMlMjBpbmRpYW4lMjBmb29kJTIwYmlyeWFuaSUyMGN1cnJ5JTIwcGl6emElMjBidXJnZXIlMjBtb21vc3xlbnwwfHx8fDE3ODc0OTg0NjZ8MA&ixlib=rb-4.1.0&q=85",
+      "north_indian": "https://images.pexels.com/photos/28674660/pexels-photo-28674660.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "burgers": "https://images.unsplash.com/photo-1613292443284-8d10ef9383fe?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDN8MHwxfHNlYXJjaHwyfHxkZWxpY2lvdXMlMjBpbmRpYW4lMjBmb29kJTIwYmlyeWFuaSUyMGN1cnJ5JTIwcGl6emElMjBidXJnZXIlMjBtb21vc3xlbnwwfHx8fDE3ODc0OTg0NjZ8MA&ixlib=rb-4.1.0&q=85",
+      "momos_street": "https://images.pexels.com/photos/32083366/pexels-photo-32083366.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+    },
+    "restaurants": {
+      "royal_biryani_house": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjByZXN0YXVyYW50JTIwaW50ZXJpb3IlMjBkaW5pbmclMjBmb29kfGVufDB8fHx8MTc4NzQ5ODQ3OXww&ixlib=rb-4.1.0&q=85",
+      "sasaram_spice_villa": "https://images.unsplash.com/photo-1590846406792-0adc7f938f1d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjByZXN0YXVyYW50JTIwaW50ZXJpb3IlMjBkaW5pbmclMjBmb29kfGVufDB8fHx8MTc4NzQ5ODQ3OXww&ixlib=rb-4.1.0&q=85",
+      "grand_thali_junction": "https://images.unsplash.com/photo-1578474846511-04ba529f0b88?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjByZXN0YXVyYW50JTIwaW50ZXJpb3IlMjBkaW5pbmclMjBmb29kfGVufDB8fHx8MTc4NzQ5ODQ3OXww&ixlib=rb-4.1.0&q=85"
+    }
+  },
+  "testing_and_qa": {
+    "mandatory_data_testid_convention": "kebab-case, role-based, semantic",
+    "key_test_ids": [
+      "customer-header-location",
+      "customer-header-search-input",
+      "customer-bottom-nav-home",
+      "customer-bottom-nav-search",
+      "customer-bottom-nav-orders",
+      "customer-bottom-nav-favourites",
+      "customer-bottom-nav-cart",
+      "restaurant-card-item",
+      "food-item-add-button",
+      "food-item-quantity-increment",
+      "food-item-quantity-decrement",
+      "cart-drawer-toggle",
+      "checkout-place-order-button",
+      "order-tracking-timeline",
+      "order-status-badge",
+      "restaurant-admin-order-accept-btn",
+      "restaurant-admin-order-ready-btn",
+      "restaurant-admin-add-product-btn",
+      "super-admin-commission-rate-input",
+      "super-admin-restaurant-toggle"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the Fudora branding: Deep Mulberry Violet (#4A0E2E) + Saffron Gold (#F59E0B) + Basil Mint (#10B981). Do NOT use Swiggy orange or Zomato red.",
+    "Import Google Fonts 'Plus Jakarta Sans' in index.css or index.html and apply it to the body.",
+    "Ensure all interactive elements have data-testid attributes according to the specification.",
+    "Implement mobile-first design with bottom navigation bar for mobile devices (< 768px).",
+    "Provide demo data tailored for Sasaram, Bihar (e.g. popular Sasaram restaurants: Grand Sasaram Darbar, Sher Shah Suri Food Court, Maurya Biryani, GT Road Bakers).",
+    "Implement working state management for Cart, Order Placement, Order Timeline updating, Favourites, and Admin toggles."
+  ]
+}

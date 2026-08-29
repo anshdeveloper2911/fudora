@@ -1,0 +1,64 @@
+{
+  "summary": "Full backend + frontend E2E test of FUDORA. Backend: 71 pytest cases (existing 58 + 13 new gap tests in test_extras.py) — 70 passed, 1 failed (no brute-force lockout). Verified 3-role auth, RBAC/data isolation, coupon math, 10% commission math, order lifecycle, reviews, favourites, upload RBAC + object-storage round trip, super-admin CRUD/settings. Frontend: verified home (desktop+mobile), mobile bottom nav (5 tabs), restaurants list + veg filter, restaurant detail ADD->stepper + floating cart, cross-restaurant replace dialog, customer signup+login, checkout with FUDORA50, order placement, order tracking timeline + 5s polling, My Orders, Search, Saved, restaurant-admin dashboard/orders/menu(image upload+save), super-admin dashboard/restaurants(sales+commission)/add-restaurant/toggle/settings, unauthorized route redirects. Found 2 CRITICAL frontend bugs.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/auth/login", "issue": "No brute-force lockout — 6 consecutive wrong-password attempts all return 401 (playbook requires 429/423 after 5 fails). No attempt counter/lockout implemented."},
+      {"endpoint": "PATCH /api/admin/settings", "issue": "commission_pct is stored only in the module-level global COMMISSION_PCT — not persisted to MongoDB. Value resets to FUDORA_COMMISSION_PCT on every backend restart/reload and would be inconsistent across multiple workers. Persist in a settings collection and read per request."},
+      {"endpoint": "CORS middleware", "issue": "CORS_ORIGINS='*' combined with allow_credentials=True; browsers reject credentialed requests against wildcard ACAO. Cookie auth only works today because the frontend also sends a Bearer token. Use explicit origins."},
+      {"endpoint": "PATCH /api/orders/{id}/status", "issue": "No state-machine validation — any transition is accepted (e.g. pending -> completed directly, or completed -> pending). super_admin can change status of any order with no further checks."},
+      {"endpoint": "PATCH /api/restaurant/products/{pid}", "issue": "Uses full ProductIn model, so a PATCH silently replaces all fields with defaults when partial payloads are sent (not true PATCH semantics)."},
+      {"endpoint": "POST /api/auth/register", "issue": "Raw Pydantic/email-validator message is returned and rendered verbatim to the user (e.g. 'value is not a valid email address: The part after the @-sign is a special-use or reserved name...'). Should return a friendly message."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "CartContext (context/CartContext.jsx)", "issue": "CRITICAL: cart is wiped on every full page load/refresh. Verified: added item (localStorage fudora_cart_v1 held Royal Biryani House + 1 item) -> page reload -> localStorage becomes {\"restaurant\":null,\"items\":[]} and the floating cart disappears. Root cause: mount effect reads localStorage while a second effect persists the initial empty state; under React StrictMode double-mount the second mount re-reads the already-overwritten empty value. Side effect: the cross-restaurant 'replace cart' dialog never appears when the user arrives via a fresh page load, so the cart is silently replaced. Fix: lazy useState initializer reading localStorage + skip the first persist write.", "selector": "[data-testid=\"floating-cart\"]", "priority": "CRITICAL"},
+      {"component": "Checkout (pages/Checkout.jsx)", "issue": "CRITICAL: after clicking Place Order the user is redirected to home '/' instead of the order confirmation/tracking page. Order IS created correctly in backend (verified FUD26082469868, subtotal 498, discount 100, total 442.9, commission 49.8). Root cause: useEffect(() => { if (count === 0) nav('/') }) fires after clear() and overrides nav(`/orders/${data.id}?new=1`). Fix: set a 'placed' flag before clear() and skip the empty-cart redirect, or navigate before clearing.", "selector": "[data-testid=\"checkout-place-order-button\"]", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Restaurant admin add-product modal", "issues": ["Price input pre-filled with '0' instead of empty placeholder", "Placeholder text on cream/warm inputs is very light — low contrast", "No visible required-field validation before Save"]},
+      {"screen": "Checkout (mobile)", "issues": ["Address inputs have no labels, only light-grey placeholders (low contrast); no inline validation — errors surface only as a toast after pressing Place Order"]},
+      {"screen": "Customer restaurant cards", "issues": ["'SAMPLE' badge overlays every demo restaurant cover image, which reads like a broken/placeholder state to end users"]},
+      {"screen": "Super admin restaurants table", "issues": ["Active/Suspended state is a plain text pill rather than a switch control; not obvious it is clickable (works correctly when clicked)"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_extras.py",
+    "/app/backend/tests/test_auth.py",
+    "/app/backend/tests/test_orders.py",
+    "/app/backend/tests/test_restaurant_admin.py",
+    "/app/backend/tests/test_super_admin.py",
+    "/app/backend/tests/test_health.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "FIX (critical): CartContext — initialise cart lazily from localStorage so a page refresh does not wipe the cart and the cross-restaurant replace dialog keeps working.",
+    "FIX (critical): Checkout — do not let the empty-cart redirect override navigation to /orders/{id} after a successful order.",
+    "Persist commission_pct in MongoDB (settings collection) instead of a module global so PATCH /api/admin/settings survives restarts.",
+    "Add brute-force lockout (429/423 after 5 failed logins per email/IP) on POST /api/auth/login.",
+    "Set explicit CORS origins instead of '*' when allow_credentials=True.",
+    "Validate order status transitions server-side (state machine) instead of accepting any status.",
+    "Return friendly validation messages on signup instead of raw Pydantic email-validator text."
+  ],
+  "critical_code_review_comments": [
+    "CartContext.jsx: two-effect load/persist pattern is unsafe under StrictMode — use useState(() => JSON.parse(localStorage.getItem(KEY) || 'null') ?? {restaurant:null,items:[]}).",
+    "Checkout.jsx: guard the `count === 0 -> nav('/')` effect with a placedRef so success navigation wins.",
+    "server.py: mutable module-level COMMISSION_PCT is shared state mutated by an API endpoint — not durable and not multi-worker safe.",
+    "server.py (866 lines) is approaching the size limit; consider splitting into routers (auth, orders, restaurant_admin, super_admin, storage).",
+    "PATCH endpoints (/restaurant/products/{pid}) should use an Optional-field update model to avoid overwriting fields with defaults."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_extras.py",
+    "/app/backend/tests/test_super_admin.py",
+    "/app/backend/tests/cleanup_qa.py"
+  ],
+  "success_rate": {"backend": "98.6% (70/71 pytest cases)", "frontend": "88% (2 critical flow bugs out of ~17 verified flows)"},
+  "seed_data_creation": "Created transient QA data via API/UI and cleaned it up with /app/backend/tests/cleanup_qa.py (TEST_QA restaurant + admin, TEST_QA product, commission reset to 10). Test orders remain under customer@fudora.demo (11 orders) plus a few reviews — harmless demo data. Signup accounts qa<ts>@qamail.com remain.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "Super admin fudoraofficial05@gmail.com / Fudora@2026; restaurant admin royal@fudora.demo / Restaurant@2026; customer customer@fudora.demo / Customer@2026 — all verified working. bcrypt hashes are $2b$ format, login sets httpOnly Secure SameSite=None cookie plus JSON token.",
+  "context_for_next_testing_agent": "Backend suite lives in /app/backend/tests (conftest.py has session-scoped logged-in clients for super/royal/spice/customer). Run `cd /app/backend && python -m pytest tests/ -q --ignore=tests/cleanup_qa.py`. Only expected failure is test_brute_force_lockout_after_5_fails until lockout is implemented. Use /app/backend/tests/cleanup_qa.py to remove TEST_QA data. IMPORTANT for Playwright: because of the cart-persistence bug, do NOT use page.goto/reload between adding items and checkout — navigate via in-app links (SPA) or the cart will be empty. After the Checkout fix, re-verify that Place Order lands on /orders/{id} with data-testid order-tracking-timeline and order-status-badge. Missing/no data-testid gaps found: none blocking (order-<status> testids are generated dynamically in ROrders).",
+  "rca_of_the_issue": "1) Cart loss: CartContext runs `useEffect(load from localStorage)` and `useEffect(write cart to localStorage, [cart])` on mount; the write effect flushes the initial empty state, and React StrictMode's second mount then reads that emptied key, so state ends as an empty cart on every full page load. 2) Home redirect after order: placeOrder() calls clear() then nav(`/orders/{id}`); the `if (count === 0) nav('/')` effect runs on the post-clear render and replaces the tracking navigation with '/'. Both are frontend-only; backend order creation, totals (subtotal 498, coupon 100, delivery 25, tax 20, total 443) and 10% commission were verified correct via API."
+}

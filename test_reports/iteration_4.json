@@ -1,0 +1,59 @@
+{
+  "summary": "Iteration 4 full verification (backend + frontend) of FUDORA location system, platform_categories, super-admin category management, wider layout/footer and the /api/offers personal-coupon leak fix. Backend: created /app/backend/tests/test_iter4_location_categories.py (12 new tests, all pass); full suite = 95 passed / 1 failed (only the known-open brute-force lockout test). Verified GET /api/platform-categories (16 seeded, sorted, Biryani first, no _id), /api/geocode/reverse (Sasaram + Mumbai), /api/geocode/search (Patna), super-admin CRUD + 403 RBAC for customer/restaurant-admin/anon, and confirmed the iter_3 critical leak is FIXED (/api/offers returns only FUDORA50, SASARAM100, FREEDEL; no personal:true, no WELCOME*/FRIEND* codes, verified both anonymously and with a customer token holding personal coupons). Frontend: header h-20 (81px) with logo + 'DELIVERING TO Sasaram' + centered search + Offers/Help/Cart/Login; 16 circular photographic categories with ZERO emoji; max-w-[1440px] confirmed; 5-column footer with social icons, app-store buttons and the exact 2026 copyright line; LocationDialog verified end-to-end (GPS grant success -> Sasaram/source=gps, GPS denial shows the exact required message, manual 'Patna' search -> geocoded results -> header update -> persistence across reload via localStorage fudora_location_v1 source=manual, 4 popular chips, 'default' source strip); city-mismatch yellow banner rendered; super-admin sidebar 'Categories' between Customers and Coupons, /super/categories grid of 16 + Add Category dialog -> POST 200 -> 17 cards -> delete works; sanity customer flow (login -> add to cart -> persists across refresh -> FUDORA50 -100 -> Place Order -> /orders/FUD260824D90C4?new=1 -> cart cleared) and restaurant admin accept (PENDING -> ACCEPTED) both pass. Mobile 390px: no horizontal overflow, bottom nav + footer fine.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/auth/login", "issue": "No brute-force lockout implemented at all (server.py has no failed-attempt counter / lock fields). 6 consecutive wrong passwords for a valid account all return 401 (expected 429/423 after 5). Playbook requirement still unmet, carried over from iteration_3.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/coupons/validate?code=&subtotal=249", "issue": "Empty coupon code returns 200 {\"discount\":0,\"coupon\":null} instead of 400 'Invalid coupon'. Frontend then renders a green success '₹0 off applied'. (A bogus non-empty code correctly returns 400.)"},
+      {"endpoint": "GET /api/platform-categories (admin usage)", "issue": "There is no admin endpoint that lists ALL categories including inactive ones. SCategories.jsx reads the public endpoint (which filters active:true), so setting 'Visible to customers' = false makes a category permanently invisible/unmanageable in the Super Admin UI. Verified: category created with active:false does not appear in the list at all."},
+      {"endpoint": "GET /api/geocode/search?q= / q=a", "issue": "Returns 422 (Query min_length=2) rather than 200 with an empty list as stated in the review request. No 5xx, so acceptable, but frontend/spec mismatch worth noting."},
+      {"endpoint": "GET /api/geocode/reverse", "issue": "Photon 'formatted' duplicates the place name for city-level hits: lat 24.949/lng 84.014 returns 'Sasaram, Sasaram, Bihar, India'. Cosmetic; the string is shown verbatim in the LocationDialog footer strip."},
+      {"endpoint": "CORS", "issue": "allow_origins comes from CORS_ORIGINS env (good), but the edge responds with 'access-control-allow-origin: *' together with 'access-control-allow-credentials: true' (invalid combo per spec, injected at ingress). Cookie itself is correct: HttpOnly; Secure; SameSite=None; Partitioned. bcrypt hashes are $2b$12$."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Home categories / SCategories grid", "issue": "Seeded 'Fast Food' image_url (unsplash photo-1553909489-cd47e0ef937f) returns a broken image — renders as an empty circle on the homepage and as broken alt-text on the super-admin grid. All other 15 load.", "selector": "[data-testid='category-item'] img", "priority": "HIGH"},
+      {"component": "OrderTracking success hero", "issue": "'Order placed! / The restaurant will confirm shortly.' heading is white/near-white text on a white-to-light card background — practically unreadable (see /orders/{id}?new=1).", "selector": "main > div:first-child", "priority": "MEDIUM"},
+      {"component": "Checkout coupon", "issue": "Clicking Apply with an empty coupon field shows the green success state '₹0 off applied' (backend returns 200/0). Should show a validation error.", "selector": "input[placeholder='Enter code (try FUDORA50)']", "priority": "MEDIUM"},
+      {"component": "CustomerLayout footer", "issue": "Footer is mounted TWICE in the DOM (<div className='hidden md:block'><Footer/></div> and <div className='md:hidden'><Footer/></div>) — duplicated links/headings/content on every customer page; only one is visible per breakpoint. Should be a single <Footer/> with responsive classes inside.", "selector": "footer", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Manual location search", "issue": "Photon results for 'Patna' surface city='Patna Rural' (county field), so the header shows 'Patna Rural' and the mismatch banner reads \"...delivering to Patna Rural yet\". Functionally correct but reads unpolished; consider preferring the more human city label / de-duplicating '<name> Rural' style county values.", "affected_selectors": ["[data-testid='location-result']", "[data-testid='customer-header-location']"]},
+      {"flow": "Category content quality", "issue": "Seeded imagery is not category-accurate: Momos and Rolls share the SAME image (photo-1626074353765) which is tandoori chicken (neither momos nor rolls); Desserts and Sweets share the same image (photo-1614252235316); 'Thali' shows a chicken+greens plate, 'Biryani' looks like fried rice. Undercuts the 'realistic food photography' goal.", "affected_selectors": ["[data-testid='category-item']"]}
+    ],
+    "design_issues": [
+      {"screen": "Order tracking (/orders/{id}?new=1)", "issues": ["Success banner text has near-zero contrast against its background"]},
+      {"screen": "Home (desktop 1920)", "issues": ["Layout, 1440px cap, section spacing, circular category images and footer all render correctly — no spacing/contrast defects found"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter4_location_categories.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Replace the broken 'Fast Food' seed image URL and de-duplicate/fix mismatched category images (Momos, Rolls, Thali, Biryani, Desserts vs Sweets).",
+    "Implement brute-force lockout on POST /api/auth/login (429/423 after 5 failed attempts) — still missing since iteration_3.",
+    "Add an admin list endpoint (e.g. GET /api/admin/platform-categories) returning inactive categories too, and point SCategories.jsx at it; otherwise the 'Visible to customers' toggle orphans records.",
+    "Return 400 for empty coupon code in POST /api/coupons/validate and stop showing '₹0 off applied' as success in Checkout.",
+    "Fix the low-contrast 'Order placed!' hero on the order tracking page.",
+    "Render <Footer/> once instead of twice in CustomerLayout.jsx."
+  ],
+  "critical_code_review_comments": [
+    "SCategories.jsx line 18-21: the inline comment admits the admin list is fetched from the public active-only endpoint; this is a real data-management gap, not just a TODO.",
+    "CustomerLayout.jsx lines 109-110 duplicate <Footer/> for both breakpoints — DRY violation and duplicated DOM/SEO content.",
+    "server.py is 1082 lines and now mixes auth, orders, geocoding proxy and category CRUD — split into routers (auth/orders/catalog/geo) before it grows further.",
+    "Geocode endpoints do outbound HTTP with the blocking `requests` library inside async handlers (pyrequests.get, timeout=8) — this blocks the event loop; use httpx.AsyncClient or run_in_threadpool.",
+    "update_platform_category returns the document without checking existence — PATCH on an unknown id returns 200/null instead of 404; same for DELETE which always returns {'ok': true}."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter4_location_categories.py", "/app/frontend/src/pages/super/SCategories.jsx"],
+  "success_rate": {"backend": "99% (95/96 pytest; 12/12 new iter-4 tests)", "frontend": "100% of the 13 requested frontend scenarios verified working; 4 UI defects + 2 content-quality issues found alongside"},
+  "seed_data_creation": "Transient only: platform categories 'TEST QA'/'TEST QA2'/'TEST QA UI'/'TEST QA HIDDEN' (all deleted), one real customer order FUD260824D90C4 (Chicken Biryani, FUDORA50, accepted by Royal Biryani House) left in place for traceability.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "/app/memory/test_credentials.md present and all 3 accounts (super admin, royal@fudora.demo, customer@fudora.demo) authenticate successfully.",
+  "context_for_next_testing_agent": "New backend suite: /app/backend/tests/test_iter4_location_categories.py (platform categories, geocode, offers-leak regression, category RBAC). Run with `cd /app/backend && python -m pytest tests/ -q`. Only known failure is test_auth.py::test_brute_force_lockout_after_5_fails (feature genuinely not implemented). I added data-testids to SCategories.jsx: scategory-card, category-name-input, category-order-input, category-active-toggle, category-save-btn. Frontend selector notes: admin/customer login buttons are NOT type=submit — use get_by_role('button', name='Login'); restaurant cards use [data-testid='restaurant-card-item'] and route /r/:id; Checkout requires filling input[placeholder='House / Street'] or Place Order silently toasts 'Complete delivery address'; do NOT use placeholder*='code' for the coupon field (it matches 'Pincode'). Playwright GPS: await page.context.grant_permissions(['geolocation']) + set_geolocation({'latitude':24.949,'longitude':84.014}) works and returns Sasaram. Denial branch can be forced by overriding navigator.geolocation.getCurrentPosition to call err({code:1}).",
+  "rca_of_the_issue": "Offers leak (iter_3 CRITICAL) is genuinely fixed: list_offers now queries {'active': True, 'personal': {'$ne': True}} — verified anonymously and with a customer token whose /api/me/coupons contains personal referral coupons; intersection with /api/offers is empty. Broken 'Fast Food' tile RCA: the URL hard-coded in seed_data.py (unsplash photo-1553909489-cd47e0ef937f) no longer resolves, and Home.jsx/SCategories.jsx have no <img> onError fallback, so the circle renders empty. Inactive-category RCA: only one read path exists (public GET /api/platform-categories, filtered on active:true) and the admin page reuses it, so active:false records vanish from the UI.",
+  "flaky_tests": []
+}

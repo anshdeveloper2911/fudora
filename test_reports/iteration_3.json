@@ -1,0 +1,52 @@
+{
+  "summary": "Iteration 3 verified the three new FUDORA features (admin sound alerts, customer push notifications, referral rewards). Backend: added /app/backend/tests/test_referral.py (13 tests) covering /api/me/referral, register-with-referral, personal coupon issuance/ownership/one-time-use and order placement with a personal coupon; full suite run = 82 passed / 2 failed (1 known-open brute-force, 1 NEW real bug: personal coupons leak into public /api/offers). Frontend: verified via Playwright the referral card (profile+offers), copy/share to clipboard, ?ref= prefill, '+ Have a referral code?' reveal, UI signup with referral -> WELCOME reward card, restaurant-admin toggle-alerts (label toggles + persists in localStorage), pending orders gold-highlighted (14 cards), tracking page enable-push-btn in all 3 permission branches (default/denied/granted), and the sanity flow (login, cart persists on refresh, place order -> /orders/{id}?new=1, admin accept -> ACCEPTED).",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/offers", "issue": "Returns ALL active coupons including personal referral coupons (WELCOME*/FRIEND*) of every user. They are shown to everyone (even anonymous) under 'Everyone's offers' on /offers; other users copying them get 400 'This coupon is not available for your account'. Fix: filter e.g. db.coupons.find({'active': True, 'personal': {'$ne': True}}) (server.py:433).", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/auth/login", "issue": "Known-open from iteration 1/2: no brute-force lockout — 6 consecutive bad passwords all return 401, never 429/423 (test_auth.py::test_brute_force_lockout_after_5_fails)"},
+      {"endpoint": "POST /api/auth/register (referral)", "issue": "Referrer's FRIEND coupon is advertised as 'free delivery' but is implemented as a flat Rs.25 off the subtotal with min_order 149. Delivery fee is per-restaurant (not always 25) and is still charged, so the reward does not actually match the copy shown in ReferralCard/description."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ReferralCard / Offers copy buttons", "issue": "navigator.clipboard.writeText() is called without .catch(); when the browser blocks clipboard write it produces an uncaught promise rejection (CRA red 'Uncaught runtime errors' overlay reproduced on /profile) while a false 'Code copied' success toast is still shown. Wrap in try/catch + fallback and only toast on success.", "selector": "[data-testid=\"referral-copy-btn\"]", "priority": "MEDIUM"},
+      {"component": "ROrders (restaurant admin)", "issue": "No loading state: 'No orders yet' empty state flashes on every mount/reload before the first /restaurant/orders response; load() also swallows all errors with an empty catch{}, so an API failure is indistinguishable from an empty list.", "selector": "text=No orders yet", "priority": "LOW"},
+      {"component": "ROrders alert logic", "issue": "When several new pending orders arrive in the same 5s poll, only fresh[0] triggers the chime/notification/toast; the other new orders are silently added.", "selector": "[data-testid=\"toggle-alerts\"]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Profile / Offers — ReferralCard", "issues": ["The decorative Gift icon renders partially outside the rounded card (white icon fragments visible below the bottom-right corner) despite overflow-hidden on the wrapper"]},
+      {"screen": "Offers page", "issues": ["'Everyone's offers' grid shows other users' WELCOME*/FRIEND* personal codes (backend leak above) — confusing and unusable for the viewer"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_referral.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Filter personal coupons out of GET /api/offers (server.py:433) — HIGH",
+    "Add try/catch (and non-secure-context fallback) around navigator.clipboard.writeText in ReferralCard.jsx and Offers.jsx; only show the success toast when the write resolves",
+    "Add a loading state to ROrders and surface load() errors instead of empty catch{}",
+    "Decide FRIEND coupon semantics: either make it a real free-delivery coupon (zero delivery_fee) or change the copy from 'free delivery' to 'Rs.25 off'",
+    "Brute-force lockout on /api/auth/login still not implemented (carried over from iteration 1/2)"
+  ],
+  "critical_code_review_comments": [
+    "server.py is 938 lines — split into routers (auth, catalog, orders, admin, referral) per the <700 line guideline",
+    "/api/offers returns raw coupon docs incl. user_id/used_count for personal coupons — response should be a trimmed public model",
+    "validate_coupon ownership + used_count checks look correct; place_order correctly deactivates personal coupons after use (verified end-to-end)",
+    "ROrders.load()/OrderTracking.load() both use bare `catch {}` — silent failure hides backend errors from users and testers"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_referral.py (new)",
+    "/app/frontend/src/components/ReferralCard.jsx (added data-testid referral-copy-btn / referral-share-btn only)"
+  ],
+  "success_rate": {"backend": "98% (82/84 pytest; 1 new real bug + 1 known-open)", "frontend": "100% of the 6 requested UI checks passed; 3 non-blocking defects noted"},
+  "seed_data_creation": "Created TEST_* customers via API and one UI signup (TEST_ui...@fudoratest.example.com, code TEST-BDAD5) referred by DEMO-A9D3A; several TEST orders on Royal Biryani House (one now ACCEPTED). customer@fudora.demo referral_count is now 5.",
+  "should_call_test_agent_after_fix": true,
+  "should_main_agent_self_test": false,
+  "test_credentials": "/app/memory/test_credentials.md is complete and accurate; customer referral code = DEMO-A9D3A",
+  "context_for_next_testing_agent": "Run `pytest /app/backend/tests/` — expect only test_brute_force_lockout_after_5_fails (known-open) and test_personal_coupons_not_in_public_offers (new bug) to fail; both are documented. Playwright note: admin login uses data-testid admin-email/admin-password/admin-login-submit (NOT auth-email). Notification.permission is 'denied' in the automation browser — spoof it with page.add_init_script(\"Object.defineProperty(Notification,'permission',{get:()=>'default'})\") to exercise the other branches. Checkout requires filling input[placeholder='House / Street'] before Place Order.",
+  "rca_of_the_issue": "GET /api/offers queries db.coupons with only {'active': True}; personal referral coupons are inserted into the same collection with personal=true + user_id, so they match the public query. Ownership is still enforced at validation time (no financial exploit) but every user's WELCOME/FRIEND codes are publicly enumerable via the API and rendered on /offers."
+}
